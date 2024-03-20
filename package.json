@@ -1,5 +1,5 @@
 {
-  "name": "open-book-be1",
+  "name": "OpenBooks-BE",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -21,8 +21,13 @@
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^3.2.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
+    "@underdog-protocol/passport": "^4.0.0",
+    "crypto-js": "^4.2.0",
+    "joi": "^17.12.2",
+    "mongoose": "^8.2.2",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"
   },
