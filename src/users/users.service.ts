@@ -3,7 +3,7 @@ import { Model } from "mongoose";
 import { SignUpDto } from "./dto/signup.dto";
 import { decryptPassword, User } from "./schema/users.schema";
 import { Keypair, Transaction, PublicKey } from "@solana/web3.js";
-import { activatePassportInstruction } from "@underdog-protocol/passport";
+// import { activatePassportInstruction } from "@underdog-protocol/passport";
 
 
 @Injectable()
