@@ -15,8 +15,7 @@ import { JoiValidationPipe } from "../config/validation.pipe";
 const signupSchema = Joi.object({
   username: Joi.string().required(),
   longitude: Joi.string().required(),
-  latitude: Joi.string().required(),
-  password: Joi.string()
+  latitude: Joi.string().required()
 });
 
 @Controller("users")

@@ -4,8 +4,8 @@ import * as CryptoJS from "crypto-js";
 
 export interface User{
   username: string;
-  password: string;
   privateKey: string;
+  publicKey: string;
   location?: {
     type: string;
     coordinates: [number];
@@ -15,7 +15,7 @@ export interface User{
 export const UserSchema = new mongoose.Schema({
   username: String,
   privateKey: String,
-  password: String,
+  publicKey: String,
   location: {
     type: {
       type: String,
@@ -38,17 +38,21 @@ export const UserProviders = [
 
 UserSchema.pre('save', function(this: User & Document, next) {  
   try {
-    if (this.password) {
-      const encryptedPassword = encryptPassword(this.password);
-      this.password = encryptedPassword;
-      next();
+    if (this.publicKey) {
+      const encryptedPublickey = encryptKeys(this.publicKey);
+      this.publicKey = encryptedPublickey;
     }
+    if (this.privateKey) {
+      const encryptedPrivateKey = encryptKeys(this.privateKey);
+      this.privateKey = encryptedPrivateKey;
+    }
+    next();
   } catch (error) {
     next(error);
   }
 });
 
-const encryptPassword = function(password: string): string {
+const encryptKeys = function(password: string): string {
   const encryptedPassword = CryptoJS.AES.encrypt(password, process.env.ENC_KEY).toString();
   return encryptedPassword;
 };

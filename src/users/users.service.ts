@@ -1,8 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Model } from "mongoose";
 import { SignUpDto } from "./dto/signup.dto";
-import { User } from "./users.interface";
-import { decryptPassword } from "./schema/users.schema";
+import { decryptPassword, User } from "./schema/users.schema";
+import { Keypair, Transaction, PublicKey } from "@solana/web3.js";
+import { activatePassportInstruction } from "@underdog-protocol/passport";
 
 
 @Injectable()
@@ -22,14 +23,16 @@ export class UsersService {
         return existingUser;
       }
 
-      console.log("this =", singupDto.password);
-
       const objToSave = {
         username: singupDto.username,
-        location: { type: 'Point', coordinates: [singupDto.longitude, singupDto.latitude] },
-        password: singupDto.password
+        location: { type: 'Point', coordinates: [singupDto.longitude, singupDto.latitude] }
       };
-  
+      
+      const { publicKey, secretKey } = await this.generateKeyPair(singupDto.username);
+
+      objToSave['publicKey'] = publicKey;
+      objToSave['privateKey'] = secretKey;
+
       const userObj = new this.userModel(objToSave);
       const user = await userObj.save();
       return user;
@@ -38,9 +41,31 @@ export class UsersService {
     }
   }
 
-  async findAll(): Promise<User> {
+  async findAll(): Promise<any> {
     const users = await this.userModel.findOne({ username: "jay" });
-    users.password = decryptPassword(users.password);
+    users.publicKey = decryptPassword(users.publicKey);
+    users.privateKey = decryptPassword(users.privateKey);
     return users;
+  }
+
+  async generateKeyPair(username: string): Promise<{
+    publicKey: String,
+    secretKey: String
+  }> {
+    // const seeds = {
+    //   identifier: username,
+    // };
+    
+    const passportAuthority = Keypair.generate();
+
+    console.log("original pub key =? ", passportAuthority.publicKey);
+    console.log("original sec key =? ", passportAuthority.secretKey);
+
+    console.log("Public key ==> ", passportAuthority.publicKey.toBase58());
+    console.log("Private key ==> ", Buffer.from(passportAuthority.secretKey).toString('base64'));
+    return {
+      publicKey:  passportAuthority.publicKey.toBase58(),
+      secretKey:  Buffer.from(passportAuthority.secretKey).toString('base64')
+    }
   }
 }
