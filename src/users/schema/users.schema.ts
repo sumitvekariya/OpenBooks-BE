@@ -4,12 +4,13 @@ import * as CryptoJS from "crypto-js";
 
 export interface User{
   username: string;
-  privateKey: string;
+  privateKey?: string;
   publicKey: string;
   location?: {
     type: string;
-    coordinates: [number];
+    coordinates: [number, number];
   };
+  token?: string;
 }
 
 export const UserSchema = new mongoose.Schema({
