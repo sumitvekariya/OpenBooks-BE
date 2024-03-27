@@ -14,26 +14,32 @@ import {
 
 import * as jwt from 'jsonwebtoken';
 import { LoginDto } from "./dto/login.dto";
+import { AddBookDto } from "./dto/book.dto";
+import { Book } from "./schema/book.schema";
 @Injectable()
 export class UsersService {
   constructor(
     @Inject("USER_MODEL")
-    private userModel: Model<User>
+    private userModel: Model<User>,
+    @Inject("BOOK_MODEL")
+    private bookModel: Model<Book>
   ) {}
 
-  async signUp(singupDto: SignUpDto): Promise<User> {
+  async signUp(signupDto: SignUpDto): Promise<User> {
     try {
 
       // check user already exists or not
-      const existingUser = await this.userModel.findOne({ username: singupDto.username });
+      const existingUser = await this.userModel.findOne({ username: signupDto.username });
 
       if (existingUser) {
         return existingUser;
       }
 
       const objToSave = {
-        username: singupDto.username,
-        location: { type: 'Point', coordinates: [singupDto.longitude, singupDto.latitude] }
+        username: signupDto.username,
+        location: { type: 'Point', coordinates: [signupDto.longitude, signupDto.latitude] },
+        name: signupDto?.name || "",
+        profilePicture: signupDto?.profilePicture || ""
       };
       
       const { publicKey, secretKey } = await this.generateKeyPair();
@@ -51,7 +57,9 @@ export class UsersService {
         longitude: user.location.coordinates[0],
         latitude: user.location.coordinates[1],
         publicKey,
-        token: this.generateToken(publicKey, user.username)
+        token: this.generateToken(publicKey, user.username, user._id.toString()),
+        name: user?.name,
+        profilePicture: user?.profilePicture
       }
       return response;
     } catch (err) {
@@ -63,7 +71,7 @@ export class UsersService {
     const user = await this.userModel.findOne({ username: loginDto.username });
     user.publicKey = decryptPassword(user.publicKey);
     delete user.privateKey;
-    user.token = this.generateToken(user.publicKey, user.username)
+    user.token = this.generateToken(user.publicKey, user.username, user._id.toString())
 
     const response = {
         _id: user._id,
@@ -71,7 +79,7 @@ export class UsersService {
         longitude: user.location.coordinates[0],
         latitude: user.location.coordinates[1],
         publicKey: decryptPassword(user.publicKey),
-        token: this.generateToken(user.publicKey, user.username)
+        token: this.generateToken(user.publicKey, user.username, user._id.toString())
     }
     return response;
   }
@@ -140,11 +148,32 @@ export class UsersService {
     }
   }
 
-  generateToken(publicKey: string, username: string) {
+  generateToken(publicKey: string, username: string, _id: string) {
     return jwt.sign({
       username,
-      publicKey
+      publicKey,
+      _id
     }, process.env.JWT_KEY);
   }
 
+  async addBook(addBookDto: AddBookDto) {
+    try {
+      const [foundBook] = await this.bookModel.find({ isbn: addBookDto?.isbn });
+
+      if (foundBook) {
+        return foundBook;
+      }
+
+      const bookObj = new this.bookModel({
+        isbn: addBookDto.isbn
+      });
+
+      const res = await bookObj.save();
+
+      // TODO:: NFT code is pending
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  }
 }

@@ -12,15 +12,24 @@ import { SignUpDto } from "./dto/signup.dto";
 import * as Joi from "joi";
 import { JoiValidationPipe } from "../config/validation.pipe";
 import { LoginDto } from "./dto/login.dto";
+import { AddBookDto } from "./dto/book.dto";
 
 const signupSchema = Joi.object({
   username: Joi.string().required(),
   longitude: Joi.string().required(),
-  latitude: Joi.string().required()
+  latitude: Joi.string().required(),
+  name: Joi.string(),
+  profilePicture: Joi.string()
 });
 
 const loginSchema = Joi.object({
-  username: Joi.string().required()
+  username: Joi.string().required(),
+  name: Joi.string(),
+  profilePicture: Joi.string()
+});
+
+const addBookSchema = Joi.object({
+  isbn: Joi.string().required()
 });
 
 @Controller("users")
@@ -56,4 +65,21 @@ export class UsersController {
       );
     }
   }
+
+  @Post('add-book')
+  @UsePipes(new JoiValidationPipe(addBookSchema))
+  async addBook(@Body() addBookDto: AddBookDto) {
+    try {
+      const book = await this.userService.addBook(addBookDto);
+      return {
+        data: book,
+      };
+    } catch (err) {
+      throw new HttpException(
+        "Internal server error",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+  
 }

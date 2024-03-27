@@ -11,21 +11,29 @@ export interface User{
     coordinates: [number, number];
   };
   token?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  name?: string;
+  profilePicture?: string;
 }
 
 export const UserSchema = new mongoose.Schema({
   username: String,
   privateKey: String,
   publicKey: String,
+  name: String,
+  profilePicture: String,
   location: {
     type: {
       type: String,
-      enum: ["Point"]
+      default: 'Point'
     },
     coordinates: {
       type: [Number]
     },
   },
+},{
+  timestamps: true
 });
 
 export const UserProviders = [
