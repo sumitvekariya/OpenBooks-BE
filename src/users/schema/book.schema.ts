@@ -3,10 +3,12 @@ import * as mongoose from "mongoose";
 
 export interface Book{
     isbn: string;
+    title?: string;
 }
 
 export const BookSchema = new mongoose.Schema({
   isbn: String,
+  title: String
 }, {
     timestamps: true
 });

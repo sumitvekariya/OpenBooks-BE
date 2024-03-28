@@ -14,7 +14,7 @@ export class AuthMiddleware implements NestMiddleware {
     }
 
     const decoded = jwt.verify(req.headers.authorization, process.env.JWT_KEY);
-
+    req['authUser'] = decoded;
     if (!decoded.publicKey && !decoded.publicKey) {
       throw new HttpException(
         'UNAUTHORIZED',

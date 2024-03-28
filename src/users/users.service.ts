@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Model } from "mongoose";
-import { SignUpDto } from "./dto/signup.dto";
+import { DecodedAuthToken, SignUpDto } from "./dto/signup.dto";
 import { decryptPassword, User } from "./schema/users.schema";
 import {
   Connection,
@@ -14,15 +14,18 @@ import {
 
 import * as jwt from 'jsonwebtoken';
 import { LoginDto } from "./dto/login.dto";
-import { AddBookDto } from "./dto/book.dto";
+import { AddBookDto, RemoveBookDto } from "./dto/book.dto";
 import { Book } from "./schema/book.schema";
+import { UserBook } from "./schema/userBook.schema";
 @Injectable()
 export class UsersService {
   constructor(
     @Inject("USER_MODEL")
     private userModel: Model<User>,
     @Inject("BOOK_MODEL")
-    private bookModel: Model<Book>
+    private bookModel: Model<Book>,
+    @Inject("USER_BOOK_MODEL")
+    private userBookModel: Model<UserBook>
   ) {}
 
   async signUp(signupDto: SignUpDto): Promise<User> {
@@ -32,7 +35,17 @@ export class UsersService {
       const existingUser = await this.userModel.findOne({ username: signupDto.username });
 
       if (existingUser) {
-        return existingUser;
+        const response  = {
+          _id: existingUser._id,
+          username: existingUser.username,
+          longitude: existingUser.location.coordinates[0],
+          latitude: existingUser.location.coordinates[1],
+          publicKey: decryptPassword(existingUser.publicKey),
+          token: this.generateToken(existingUser?.publicKey, existingUser._id.toString()),
+          name: existingUser?.name,
+          profilePicture: existingUser?.profilePicture
+        }
+        return response;
       }
 
       const objToSave = {
@@ -48,8 +61,7 @@ export class UsersService {
       objToSave['privateKey'] = secretKey;
 
       const userObj = new this.userModel(objToSave);
-      const user = await userObj.save();
-      delete userObj.privateKey;
+      const user = await userObj.save();;
 
       const response  = {
         _id: user._id,
@@ -57,7 +69,7 @@ export class UsersService {
         longitude: user.location.coordinates[0],
         latitude: user.location.coordinates[1],
         publicKey,
-        token: this.generateToken(publicKey, user.username, user._id.toString()),
+        token: this.generateToken(publicKey, user._id.toString()),
         name: user?.name,
         profilePicture: user?.profilePicture
       }
@@ -70,16 +82,14 @@ export class UsersService {
   async login(loginDto: LoginDto): Promise<User> {
     const user = await this.userModel.findOne({ username: loginDto.username });
     user.publicKey = decryptPassword(user.publicKey);
-    delete user.privateKey;
-    user.token = this.generateToken(user.publicKey, user.username, user._id.toString())
 
     const response = {
         _id: user._id,
         username: user.username,
         longitude: user.location.coordinates[0],
         latitude: user.location.coordinates[1],
-        publicKey: decryptPassword(user.publicKey),
-        token: this.generateToken(user.publicKey, user.username, user._id.toString())
+        publicKey: user.publicKey,
+        token: this.generateToken(user.publicKey, user._id.toString()),
     }
     return response;
   }
@@ -148,30 +158,79 @@ export class UsersService {
     }
   }
 
-  generateToken(publicKey: string, username: string, _id: string) {
+  generateToken(publicKey: string, _id: string) {
     return jwt.sign({
-      username,
       publicKey,
       _id
     }, process.env.JWT_KEY);
   }
 
-  async addBook(addBookDto: AddBookDto) {
+  async addBook(addBookDto: AddBookDto, authUser: DecodedAuthToken) {
     try {
       const [foundBook] = await this.bookModel.find({ isbn: addBookDto?.isbn });
 
+      const userBookObj: UserBook = {
+        userId: authUser._id,
+        is_active: true,
+        bookId: ""
+      }
+
       if (foundBook) {
+        userBookObj.bookId = foundBook._id.toString();
+
+        // check in userBookmodel
+        const [assignedBook] = await this.userBookModel.find({ userId: authUser._id, bookId: foundBook._id, is_active: 1});
+
+        if (!assignedBook) {
+          await new this.userBookModel(userBookObj).save();
+        }
         return foundBook;
       }
 
       const bookObj = new this.bookModel({
-        isbn: addBookDto.isbn
+        isbn: addBookDto.isbn,
+        title: addBookDto?.title || ""
       });
 
       const res = await bookObj.save();
 
+      // save user book model schema
+      userBookObj.bookId = res._id.toString();
+      // check in userBookmodel
+      const [assignedBook] = await this.userBookModel.find({ userId: authUser._id, bookId: res._id, is_active: 1});
+      
+      if (!assignedBook) {
+        await new this.userBookModel(userBookObj).save();
+      }
       // TODO:: NFT code is pending
       return res;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async removeBook(removeBookDto: RemoveBookDto, authUser: DecodedAuthToken) {
+    try {
+      const assignedBooks = await this.userBookModel.find({ userId: authUser._id, bookId: removeBookDto.bookId, is_active: 1});
+
+      if (assignedBooks?.length == 0) {
+        throw new HttpException(
+          "First add a book",
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      await this.userBookModel.updateOne({ userId: authUser._id, bookId: removeBookDto.bookId }, { $set: { is_active: false }});
+      return;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async getMyBooks(authUser: DecodedAuthToken) {
+    try {
+      const books = await this.userBookModel.find({ userId: authUser._id, is_active: true}).populate('bookId');
+      return books;
     } catch (err) {
       throw err;
     }

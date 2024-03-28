@@ -5,3 +5,8 @@ export class SignUpDto {
   name?:  string;
   profilePicture?: string;
 }
+
+export class DecodedAuthToken {
+  _id: string;
+  publicKey: string;
+}
