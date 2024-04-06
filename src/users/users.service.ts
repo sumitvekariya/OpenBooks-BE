@@ -539,7 +539,7 @@ export class UsersService {
     try {
       console.log("flow came herer in setMintaddress after 10 seconds");
       const mintedObject = await this.searchNFT(nftId);
-      console.log("Mint object ==> ", mintedObject);
+      console.log("Mint object ==> ", mintedObject, "++" , userId.toString(), " ++ ", bookId.toString, " ++ ", nftId);
       await this.userBookModel.findOneAndUpdate({ userId, bookId, nftId }, { $set: { mintAddress: mintedObject.mintAddress , ownerAddress: mintedObject.ownerAddress }});
     } catch (err) {
       throw err;
