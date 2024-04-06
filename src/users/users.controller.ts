@@ -20,17 +20,16 @@ import { AddBookDto, RemoveBookDto } from "./dto/book.dto";
 const bookSchema = Joi.array().items({
   isbn: Joi.string().required(),
   title: Joi.string().required(),
-  author: Joi.string(),
-  description: Joi.string(),
+  author: Joi.string().required(),
+  description: Joi.string().required(),
   imageUrl: Joi.string()
 }).min(1).max(3).required();
 
 const signupSchema = Joi.object({
-  username: Joi.string().required(),
   longitude: Joi.string().required(),
   latitude: Joi.string().required(),
-  name: Joi.string(),
-  email: Joi.string(),
+  name: Joi.string().required(),
+  email: Joi.string().required(),
   profilePicture: Joi.string(),
   books: bookSchema
 });
@@ -64,7 +63,7 @@ export class UsersController {
   @UsePipes(new JoiValidationPipe(signupSchema))
   async SignUp(@Req() req: Request, @Body() signupDto: SignUpDto) {
     try {
-      const user = await this.userService.register(signupDto, req['authUser']);
+      const user = await this.userService.mintBooks(signupDto, req['authUser']);
       return { data: user };
     } catch (err) {
       throw new HttpException(
@@ -157,6 +156,21 @@ export class UsersController {
   async getBookDetails(@Param('isbn') isbn: string) {
     try {
       const response = await this.userService.getBookDetails(isbn);
+      return {
+        data: response
+      };
+    } catch (err) {
+      throw new HttpException(
+        err.message,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Get('export-private-key')
+  async importPrivateKey(@Req() req: Request) {
+    try {
+      const response = await this.userService.importPrivateKey(req['authUser']);
       return {
         data: response
       };

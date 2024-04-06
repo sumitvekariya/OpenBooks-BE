@@ -28,7 +28,7 @@ export class UsersService {
     private userBookModel: Model<UserBook>
   ) {}
 
-  async register(signupDto: SignUpDto, authUser: DecodedAuthToken): Promise<User> {
+  async mintBooks(signupDto: SignUpDto, authUser: DecodedAuthToken): Promise<User> {
     try {
       // update user profile details first
       const udpateObj = {};
@@ -83,7 +83,7 @@ export class UsersService {
         book = await this.bookModel.findOne({ isbn: signupDto.books[i].isbn });
         if (book) {
           // if user book does not exit then only push
-          const userBook = await this.userBookModel.find({ bookdId: book._id, userId: authUser._id });
+          const userBook = await this.userBookModel.findOne({ bookdId: book._id, userId: authUser._id });
           if (!userBook) {
             await this.bookModel.findOneAndUpdate({ isbn: signupDto.books[i].isbn }, { $push: { nftIds: promiseResults[i].nftId }});
           }
@@ -118,9 +118,14 @@ export class UsersService {
         }
       }
 
+      const newRes = {
+        _id: response._id,
+        username: response.username,
+        name: response.email
+      };
+
       return response;
     } catch (err) {
-      console.log(err);
       throw err;
     }
   }
@@ -159,12 +164,6 @@ export class UsersService {
         };
         
         const { publicKey, secretKey } = await this.generateKeyPair();
-        
-
-        console.log("new keys ==> ", publicKey);
-        console.log("new secret  ==> ", secretKey);
-
-
 
         objToSave['publicKey'] = publicKey;
         objToSave['privateKey'] = secretKey;
@@ -439,20 +438,23 @@ export class UsersService {
         title: foundBook.title,
         author: foundBook.author,
         description: foundBook.description,
-        nftIds: foundBook.nftIds
       }
 
-      // const allPromises = [];
-      // for (let i=0; i<foundBook.nftIds.length; i++){
-      //   allPromises.push(await this.searchNFT(foundBook.nftIds[i]));
-      // }
+      const allPromises = [];
+      for (let i=0; i<foundBook.nftIds.length; i++){
+        allPromises.push(await this.searchNFT(foundBook.nftIds[i]));
+      }
 
-      // const promiseResults = await Promise.all(allPromises);
+      let promiseResults = await Promise.all(allPromises);
+      promiseResults = JSON.parse(JSON.stringify(promiseResults));
+      for(let i=0; i<promiseResults.length; i++) {
+        const userBook = await this.userBookModel.findOne({ nftId: promiseResults[i].nftId });
+        const userObj = await this.userModel.findOne({ _id: userBook.userId }, { username: 1, name: 1, profilePicture: 1});
+        promiseResults[i]['userData'] = userObj;
+      }
 
-      // for(let i=0; i<promiseResults.length; i++) {
-      //   promiseResults['userData'] = 
-      // }
-
+      response['users'] = promiseResults;
+      console.log(promiseResults);
       return response;
     } catch (err) {
       throw err;
@@ -466,7 +468,7 @@ export class UsersService {
         url: `${process.env.UNDERDOG_URL}/${process.env.PROJECT_ID}/nfts/${nftId}`,
         headers: {
           accept: "application/json",
-          authorization: `Bearer ${process.env.UNDERDOG_API}`,
+          authorization: `Bearer ${process.env.UNDERDOG_TOKEN}`,
         }
       };
 
@@ -478,6 +480,26 @@ export class UsersService {
       };
 
     } catch (err) {
+      throw err;
+    }
+  }
+
+  async importPrivateKey(authUser: DecodedAuthToken) {
+    try {
+      const user = await this.userModel.findOne({ _id: authUser._id });
+
+      if (!user) {
+        throw new HttpException(
+          "User not found",
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      return {
+        privateKey: decryptPassword(user.privateKey)
+      }
+    } catch (err) {
+      console.log("Import key errr => ", err);
       throw err;
     }
   }
