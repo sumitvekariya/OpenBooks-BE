@@ -275,7 +275,7 @@ export class UsersService {
         userBookObj.bookId = foundBook._id.toString();
 
         // check in userBookmodel
-        const assignedBook = await this.userBookModel.findOne({ userId: authUser._id, bookId: foundBook._id });
+        const assignedBook = await this.userBookModel.findOne({ userId: authUser._id, bookId: foundBook._id.toString() });
 
         if (!assignedBook) {
           // mint book and save in userbook
@@ -293,7 +293,7 @@ export class UsersService {
           userBookObj['transactionId'] = mintResult.transactionId;
           await new this.userBookModel(userBookObj).save();
         } else {
-          await this.userBookModel.findOneAndUpdate({  userId: authUser._id, bookId: foundBook._id }, { $set: { is_active: true }});
+          await this.userBookModel.findOneAndUpdate({  userId: authUser._id, bookId: foundBook._id.toString() }, { $set: { is_active: true }});
         }
         return foundBook;
       }
@@ -326,7 +326,7 @@ export class UsersService {
       // save user book model schema
       userBookObj.bookId = res._id.toString();
       // check in userBookmodel
-      const [assignedBook] = await this.userBookModel.find({ userId: authUser._id, bookId: res._id, is_active: 1});
+      const [assignedBook] = await this.userBookModel.find({ userId: authUser._id, bookId: res._id.toString(), is_active: 1});
       
       if (!assignedBook) {
         await new this.userBookModel(userBookObj).save();
