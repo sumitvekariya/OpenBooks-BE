@@ -15,6 +15,7 @@ import * as Joi from "joi";
 import { JoiValidationPipe } from "../config/validation.pipe";
 import { LoginDto } from "./dto/login.dto";
 import { AddBookDto, RemoveBookDto } from "./dto/book.dto";
+import { PasspostInfo, Seeds } from "./dto/passport.dto";
 
 const signupSchema = Joi.object({
   username: Joi.string().required(),
@@ -39,9 +40,23 @@ const removeBookSchema = Joi.object({
   bookId: Joi.string().required()
 });
 
+const passportSchema = Joi.object({
+  passportauth: Joi.string().required(),
+  identifier: Joi.string().required(),
+  namespace: Joi.string().required()
+});
+
 @Controller("users")
 export class UsersController {
-  constructor(private readonly userService: UsersService) {}
+  constructor(private readonly userService: UsersService) { }
+  
+
+  @Post('activatePassportInstruction')
+  @UsePipes(new JoiValidationPipe(passportSchema))
+  async activatePassportInstruction(@Body() info: PasspostInfo): Promise<string> {
+    const result = this.userService.activatePassport(info);
+    return result;
+  }
 
   @Post('signup')
   @UsePipes(new JoiValidationPipe(signupSchema))

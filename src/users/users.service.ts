@@ -6,7 +6,9 @@ import {
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
+  PublicKey,
   SystemProgram,
+  Transaction,
   TransactionMessage,
   VersionedTransaction,
 } from "@solana/web3.js";
@@ -17,6 +19,9 @@ import { LoginDto } from "./dto/login.dto";
 import { AddBookDto, RemoveBookDto } from "./dto/book.dto";
 import { Book } from "./schema/book.schema";
 import { UserBook } from "./schema/userBook.schema";
+import { PasspostInfo, Seeds } from './dto/passport.dto';
+import { activatePassportInstruction, getPassportAddress } from "@underdog-protocol/passport";
+import * as bs58 from 'bs58';
 @Injectable()
 export class UsersService {
   constructor(
@@ -26,7 +31,66 @@ export class UsersService {
     private bookModel: Model<Book>,
     @Inject("USER_BOOK_MODEL")
     private userBookModel: Model<UserBook>
-  ) {}
+  ) { }
+  
+  async activatePassport(passpostInfo: PasspostInfo): Promise<string>{
+
+    const connection = new Connection(process.env.RPC_URL || '');
+
+    const domainKeypair = Keypair.fromSecretKey(bs58.decode(process.env.DOMAIN_SECRET_KEY || ''));
+    const passportKeypair = Keypair.fromSecretKey(bs58.decode(passpostInfo.passportauth));
+
+    const seeds = {
+      identifier: passpostInfo.identifier,
+      namespace: passpostInfo.namespace,
+    };
+
+    const address = getPassportAddress(seeds);
+    console.log(address);
+
+    const instruction = activatePassportInstruction(
+      seeds,
+      domainKeypair.publicKey,
+      new PublicKey(address.toString)
+    );
+    console.log(instruction);
+
+    const balance = await connection.getBalance(domainKeypair.publicKey);
+    console.log(balance.toString());
+
+    if (balance <= 1000000 && process.env.NODE_ENV === "dev") {
+      let airdropSignature = await connection.requestAirdrop(domainKeypair.publicKey, LAMPORTS_PER_SOL);
+
+      const latestBlockHash = await connection.getLatestBlockhash();
+
+      await connection.confirmTransaction({
+        signature: airdropSignature, blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight
+      });
+      const balance = await connection.getBalance(domainKeypair.publicKey);
+      console.log(balance.toString());
+    }
+
+    //const transaction = new Transaction().add(instruction);
+    const transaction = new Transaction().add(instruction);
+
+    // Set the transaction's blockhash so domain authority can sign
+    const { blockhash } = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+
+    // Step 2: Sign with the Domain authority
+    transaction.partialSign(domainKeypair);
+
+    // Step 3: Prompt user to sign & send
+    transaction.partialSign(passportKeypair);
+
+    const txid = await connection.sendTransaction(transaction, [domainKeypair], {
+      skipPreflight: true,
+    })
+
+    return txid.toString();
+
+  }
 
   async signUp(signupDto: SignUpDto): Promise<User> {
     try {
@@ -105,7 +169,7 @@ export class UsersService {
       const keypair = Keypair.generate();
 
       let connection = new Connection(
-        process.env.SOLANA_RPC_URL,
+        process.env.RPC_URL,
         "confirmed",
       );
 
