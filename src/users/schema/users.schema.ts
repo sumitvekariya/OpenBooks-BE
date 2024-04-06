@@ -14,6 +14,7 @@ export interface User{
   createdAt?: string;
   updatedAt?: string;
   name?: string;
+  email?: string;
   profilePicture?: string;
 }
 
@@ -22,6 +23,7 @@ export const UserSchema = new mongoose.Schema({
   privateKey: String,
   publicKey: String,
   name: String,
+  email: String,
   profilePicture: String,
   location: {
     type: {

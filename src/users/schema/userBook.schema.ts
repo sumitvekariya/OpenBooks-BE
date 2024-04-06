@@ -9,6 +9,8 @@ export interface UserBook{
         coordinates: [number, number];
     };
     is_active: boolean;
+    nftId: number,
+    transactionId: string
 }
 
 export const UserBookSchema = new mongoose.Schema({
@@ -19,6 +21,12 @@ export const UserBookSchema = new mongoose.Schema({
   bookId: {
     type: mongoose.Types.ObjectId,
     ref: 'books'
+  },
+  nftId: {
+    type: Number
+  },
+  transactionId: {
+    type: String
   },
   is_active: {
     type: Boolean,

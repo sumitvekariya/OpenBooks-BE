@@ -4,6 +4,16 @@ export class SignUpDto {
   latitude: string;
   name?:  string;
   profilePicture?: string;
+  email?: string;
+  books: [
+    {
+      isbn: string,
+      title: string,
+      author: string,
+      description?: string,
+      imageUrl?: string
+    }
+  ]
 }
 
 export class DecodedAuthToken {

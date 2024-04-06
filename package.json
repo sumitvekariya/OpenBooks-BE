@@ -26,6 +26,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@solana/web3.js": "^1.91.1",
     "@underdog-protocol/passport": "^4.0.0",
+    "axios": "^1.6.8",
     "crypto-js": "^4.2.0",
     "joi": "^17.12.2",
     "jsonwebtoken": "^9.0.2",

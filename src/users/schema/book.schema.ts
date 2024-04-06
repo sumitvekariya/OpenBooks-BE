@@ -3,12 +3,22 @@ import * as mongoose from "mongoose";
 
 export interface Book{
     isbn: string;
-    title?: string;
+    title: string;
+    author: string;
+    description?: string;
+    imageUrl?: string;
+    symbol?: string;
+    nftIds?: [number]
 }
 
 export const BookSchema = new mongoose.Schema({
   isbn: String,
-  title: String
+  title: String,
+  author: String,
+  description: String,
+  imageUrl: String,
+  symbol: String,
+  nftIds: [Number] // 1, 2, 3
 }, {
     timestamps: true
 });
