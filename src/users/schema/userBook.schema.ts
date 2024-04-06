@@ -32,6 +32,12 @@ export const UserBookSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  mintAddress: {
+    type: String
+  },
+  ownerAddress: {
+    type: String
+  },
   location: {
     type: {
       type: String,

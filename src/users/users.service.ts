@@ -28,7 +28,7 @@ export class UsersService {
     private userBookModel: Model<UserBook>
   ) {}
 
-  async mintBooks(signupDto: SignUpDto, authUser: DecodedAuthToken): Promise<User> {
+  async mintBooks(signupDto: SignUpDto, authUser: DecodedAuthToken) {
     try {
       // update user profile details first
       const udpateObj = {};
@@ -112,6 +112,11 @@ export class UsersService {
             transactionId: promiseResults[i].transactionId
           }
           await new this.userBookModel(userBookObj).save();
+
+          // setTimeout(() => {
+          //   this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id);
+          // }, 10 * 1000);
+
         } else {
           // set is_active to true
           await this.userBookModel.findOneAndUpdate({  userId: authUser._id, bookId: book._id }, { $set: { is_active: true }});
@@ -121,11 +126,12 @@ export class UsersService {
       const newRes = {
         _id: response._id,
         username: response.username,
-        name: response.email
+        name: response.name
       };
 
-      return response;
+      return newRes;
     } catch (err) {
+      console.log("err  in mint book  => ", err);
       throw err;
     }
   }
@@ -140,8 +146,8 @@ export class UsersService {
 
         // console.log("123 ===> ", decryptPassword(user.privateKey))
 
-
-
+        // const key = decryptPassword(user.privateKey)
+        // console.log("private key ==>? ", Buffer.from(key).toString('hex'));
         const response = {
             _id: user._id,
             username: user.username,
@@ -207,6 +213,7 @@ export class UsersService {
       const space = 0;
       const balance = await connection.getBalance(payer.publicKey);
 
+      // TODO:: if we would be live on mainnet,  we need manage sol tokens on a project id request airdrop would not work
       if (balance <= 1000000 && process.env.NODE_ENV === "dev") {
         let airdropSignature = await connection.requestAirdrop(payer.publicKey, LAMPORTS_PER_SOL);
         
@@ -242,7 +249,7 @@ export class UsersService {
       // console.log("tx after signing:", tx);
       const sig = await connection.sendTransaction(tx);
       // console.log("Transaction completed.", sig);
-      
+      // console.log("private key ==>? ", Buffer.from(keypair.secretKey).toString('hex'));
       return {
         publicKey: keypair.publicKey.toBase58(),
         secretKey: Buffer.from(keypair.secretKey).toString('hex')
@@ -404,10 +411,12 @@ export class UsersService {
             isbn: bookDetails.isbn,
             title: bookDetails?.title,
             author: bookDetails?.author,
+            description: bookDetails?.description || "",
+            imageUrl: bookDetails?.imageUrl || ""
           },
           receiver: { address: publicKey },
           receiverAddress: publicKey,
-          name: bookDetails.title,
+          name: bookDetails.title.substring(0, 32),
           symbol: bookDetails?.symbol || "",
           description: bookDetails?.description || "",
           image: bookDetails?.imageUrl || "",
@@ -500,6 +509,17 @@ export class UsersService {
       }
     } catch (err) {
       console.log("Import key errr => ", err);
+      throw err;
+    }
+  }
+
+  async setMintAddress(nftId: number, userId: string, bookId: string) {
+    try {
+      console.log("flow came herer in setMintaddress after 10 seconds");
+      const mintedObject = await this.searchNFT(nftId);
+      console.log("Mint object ==> ", mintedObject);
+      await this.userBookModel.findOneAndUpdate({ userId, bookId, nftId }, { $set: { mintAddress: mintedObject.mintAddress , ownerAddress: mintedObject.ownerAddress }});
+    } catch (err) {
       throw err;
     }
   }
