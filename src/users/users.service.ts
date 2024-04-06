@@ -113,13 +113,13 @@ export class UsersService {
           }
           await new this.userBookModel(userBookObj).save();
 
-          setTimeout(() => {
-            this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id);
+          setTimeout(async () => {
+            await this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id);
           }, 10 * 1000);
 
         } else {
-          setTimeout(() => {
-            this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id);
+          setTimeout(async () => {
+            await this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id);
           }, 10 * 1000);
           // set is_active to true
           await this.userBookModel.findOneAndUpdate({  userId: authUser._id, bookId: book._id }, { $set: { is_active: true }});
@@ -539,7 +539,7 @@ export class UsersService {
     try {
       console.log("flow came herer in setMintaddress after 10 seconds");
       const mintedObject = await this.searchNFT(nftId);
-      console.log("Mint object ==> ", mintedObject, "++" , userId.toString(), " ++ ", bookId.toString, " ++ ", nftId);
+      console.log("Mint object ==> ", mintedObject, "++" , userId.toString(), " ++ ", bookId.toString(), " ++ ", nftId);
       await this.userBookModel.findOneAndUpdate({ userId, bookId, nftId }, { $set: { mintAddress: mintedObject.mintAddress , ownerAddress: mintedObject.ownerAddress }});
     } catch (err) {
       throw err;
