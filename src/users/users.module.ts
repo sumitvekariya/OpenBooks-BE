@@ -22,6 +22,8 @@ export class UsersModule implements NestModule {
         { path: 'users/remove-book', method: RequestMethod.POST },
         { path: 'users/my-books', method: RequestMethod.GET },
         { path: 'users/export-private-key', method: RequestMethod.GET },
+        { path: 'users/book-details/:isbn', method: RequestMethod.GET },
+        
       );
   }
 }

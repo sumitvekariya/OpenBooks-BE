@@ -83,7 +83,7 @@ export class UsersService {
         book = await this.bookModel.findOne({ isbn: signupDto.books[i].isbn });
         if (book) {
           // if user book does not exit then only push
-          const userBook = await this.userBookModel.findOne({ bookdId: book._id, userId: authUser._id });
+          const userBook = await this.userBookModel.findOne({ bookId: book._id, userId: authUser._id });
           if (!userBook) {
             await this.bookModel.findOneAndUpdate({ isbn: signupDto.books[i].isbn }, { $push: { nftIds: promiseResults[i].nftId }});
           }
@@ -113,11 +113,14 @@ export class UsersService {
           }
           await new this.userBookModel(userBookObj).save();
 
-          // setTimeout(() => {
-          //   this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id);
-          // }, 10 * 1000);
+          setTimeout(() => {
+            this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id);
+          }, 10 * 1000);
 
         } else {
+          setTimeout(() => {
+            this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id);
+          }, 10 * 1000);
           // set is_active to true
           await this.userBookModel.findOneAndUpdate({  userId: authUser._id, bookId: book._id }, { $set: { is_active: true }});
         }
@@ -449,21 +452,40 @@ export class UsersService {
         description: foundBook.description,
       }
 
-      const allPromises = [];
-      for (let i=0; i<foundBook.nftIds.length; i++){
-        allPromises.push(await this.searchNFT(foundBook.nftIds[i]));
-      }
+      const userData = await this.userBookModel.aggregate([
+        {
+            $match: {
+                nftId: { $in: foundBook.nftIds }
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userData"
+            }
+        },
+        {
+            $unwind: {
+                path: "$userData",
+                preserveNullAndEmptyArrays: false
+            }
+        },
+        {
+            $project: {
+                nftId: 1,
+                mintAddress: 1,
+                ownerAddress: 1,
+                "userData._id": 1,
+                "userData.username": 1,
+                "userData.name": 1,
+                "userData.profilePicture": 1,
+            }
+        }
+      ]);
 
-      let promiseResults = await Promise.all(allPromises);
-      promiseResults = JSON.parse(JSON.stringify(promiseResults));
-      for(let i=0; i<promiseResults.length; i++) {
-        const userBook = await this.userBookModel.findOne({ nftId: promiseResults[i].nftId });
-        const userObj = await this.userModel.findOne({ _id: userBook.userId }, { username: 1, name: 1, profilePicture: 1});
-        promiseResults[i]['userData'] = userObj;
-      }
-
-      response['users'] = promiseResults;
-      console.log(promiseResults);
+      response['users'] = userData;
       return response;
     } catch (err) {
       throw err;
