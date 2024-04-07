@@ -113,14 +113,14 @@ export class UsersService {
           }
           await new this.userBookModel(userBookObj).save();
 
-          setTimeout(async () => {
-            await this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id.toString());
-          }, 10 * 1000);
+          // setTimeout(async () => {
+          //   await this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id.toString());
+          // }, 10 * 1000);
 
         } else {
-          setTimeout(async () => {
-            await this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id.toString());
-          }, 10 * 1000);
+          // setTimeout(async () => {
+          //   await this.setMintAddress(promiseResults[i].nftId, authUser._id, book._id.toString());
+          // }, 10 * 1000);
           // set is_active to true
           await this.userBookModel.findOneAndUpdate({  userId: authUser._id, bookId: book._id }, { $set: { is_active: true }});
         }
@@ -452,57 +452,64 @@ export class UsersService {
         description: foundBook.description,
       }
 
-      // const userData = await this.userBookModel.aggregate([
-      //   {
-      //       $match: {
-      //           nftId: { $in: foundBook.nftIds }
-      //       }
-      //   },
-      //   {
-      //       $lookup: {
-      //           from: "users",
-      //           localField: "userId",
-      //           foreignField: "_id",
-      //           as: "userData"
-      //       }
-      //   },
-      //   {
-      //       $unwind: {
-      //           path: "$userData",
-      //           preserveNullAndEmptyArrays: false
-      //       }
-      //   },
-      //   {
-      //       $project: {
-      //           nftId: 1,
-      //           mintAddress: 1,
-      //           ownerAddress: 1,
-      //           "userData._id": 1,
-      //           "userData.username": 1,
-      //           "userData.name": 1,
-      //           "userData.profilePicture": 1,
-      //       }
-      //   }
-      // ]);
-
-      // response['users'] = userData;
-
       const allPromises = [];
-      for (let i=0; i<foundBook.nftIds.length; i++){
-        allPromises.push(await this.searchNFT(foundBook.nftIds[i]));
+      const userBooks = await this.userBookModel.find({ bookId: foundBook._id.toString(), mintAddress: "" });
+
+      const nftIds = userBooks.map((obj) => obj.nftId);
+
+      for (let i=0; i<nftIds.length; i++){
+        allPromises.push(await this.searchNFT(nftIds[i]));
       }
 
       let promiseResults = await Promise.all(allPromises);
       promiseResults = JSON.parse(JSON.stringify(promiseResults));
       for(let i=0; i<promiseResults.length; i++) {
-        const userBook = await this.userBookModel.findOne({ nftId: promiseResults[i].nftId });
-        const userObj = await this.userModel.findOne({ _id: userBook.userId }, { username: 1, name: 1, profilePicture: 1});
-        promiseResults[i]['userData'] = userObj;
+        // const userBook = await this.userBookModel.findOne({ nftId: promiseResults[i].nftId });
+        // const userObj = await this.userModel.findOne({ _id: userBook.userId }, { username: 1, name: 1, profilePicture: 1});
+
+        await this.userBookModel.updateOne({ nftId: promiseResults[i].nftId }, { $set: { mintAddress: promiseResults[i].mintAddress, ownerAddress: promiseResults[i].ownerAddress }});
+
+        // promiseResults[i]['userData'] = userObj;
       }
 
-      response['users'] = promiseResults;
-      console.log(promiseResults);
+      // response['users'] = promiseResults;
+      // console.log(promiseResults);
       
+      const userData = await this.userBookModel.aggregate([
+        {
+            $match: {
+                bookId: foundBook._id
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userData"
+            }
+        },
+        {
+            $unwind: {
+                path: "$userData",
+                preserveNullAndEmptyArrays: false
+            }
+        },
+        {
+            $project: {
+                nftId: 1,
+                mintAddress: 1,
+                ownerAddress: 1,
+                "userData._id": 1,
+                "userData.username": 1,
+                "userData.name": 1,
+                "userData.profilePicture": 1,
+            }
+        }
+      ]);
+
+      response['users'] = userData;
+
       return response;
     } catch (err) {
       throw err;

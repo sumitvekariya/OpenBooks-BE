@@ -33,7 +33,8 @@ export const UserBookSchema = new mongoose.Schema({
     default: true
   },
   mintAddress: {
-    type: String
+    type: String,
+    default: ""
   },
   ownerAddress: {
     type: String
