@@ -26,10 +26,10 @@ const bookSchema = Joi.array().items({
 }).min(1).max(3).required();
 
 const signupSchema = Joi.object({
-  longitude: Joi.string().required(),
-  latitude: Joi.string().required(),
-  name: Joi.string().required(),
-  email: Joi.string().required(),
+  longitude: Joi.string(),
+  latitude: Joi.string(),
+  name: Joi.string(),
+  email: Joi.string(),
   profilePicture: Joi.string(),
   books: bookSchema
 });
